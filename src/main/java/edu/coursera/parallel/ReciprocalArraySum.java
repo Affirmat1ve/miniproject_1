@@ -31,8 +31,8 @@ public final class ReciprocalArraySum {
         double sum = 0;
 
         // Compute sum of reciprocals of array elements
-        for (int i = 0; i < input.length; i++) {
-            sum += 1 / input[i];
+        for (double v : input) {
+            sum += 1 / v;
         }
 
         return sum;
@@ -107,7 +107,7 @@ public final class ReciprocalArraySum {
         /**
          * Intermediate value produced by this task.
          */
-        private double value=0;
+        private double value;
 
         /**
          * Constructor.
@@ -131,13 +131,15 @@ public final class ReciprocalArraySum {
             return value;
         }
 
-        static long qwe=5000;
+        //static long qwe=5000;
 
         @Override
         protected void compute() {
 
-
-
+            value = 0;
+            for(int i = startIndexInclusive; i<endIndexExclusive; i++) {
+                value += 1 / input[i];
+            /*
             if (startIndexInclusive-endIndexExclusive <= qwe){
                 for (int i = startIndexInclusive; i < endIndexExclusive; i++) { value += 1 / input[i];}
             } else {
@@ -147,6 +149,9 @@ public final class ReciprocalArraySum {
                 right.compute();
                 left.join();
                 value = left.value+ right.value;
+            }
+
+             */
             }
         }
     }
@@ -193,18 +198,19 @@ public final class ReciprocalArraySum {
 
     protected static double parArraySum(final double[] input) {
         assert input.length % 2 == 0;
-        final int q=(input.length/2);
-        double sum = 0;
+        int q=input.length/2;
+        double sum;
         //System.setProperty("java.util.concurrent.ForkJoinPool.common.parallelism","1");
 
 
         ReciprocalArraySumTask t1 = new ReciprocalArraySumTask(0,q,input);
         ReciprocalArraySumTask t2 = new ReciprocalArraySumTask(q,input.length,input);
-        ReciprocalArraySumTask.invokeAll(t1,t2);
+        t1.fork();
+        t2.compute();
         t1.join();
-        t2.join();
-        sum=t1.value+ t2.value;
-        //sum=t1.getValue()+t2.getValue();
+
+        sum=t1.getValue() + t2.getValue();
+
 
 
         /*
@@ -289,11 +295,22 @@ public final class ReciprocalArraySum {
 
 
 
-        // Compute sum of reciprocals of array elements
-        for (int i = 0; i < input.length; i++) {
-            sum += 1 / input[i];
+        ReciprocalArraySumTask output [] = new ReciprocalArraySumTask[numTasks];
+        for (int i=0; i<numTasks; i++){
+            output[i] = new ReciprocalArraySumTask(getChunkStartInclusive(i, numTasks, input.length), getChunkEndExclusive(i, numTasks, input.length), input);
         }
-
+        for (int i=1; i<numTasks; i++){
+            output[i].fork();
+        }
+        output[0].compute();
+        for (int i=1; i<numTasks; i++){
+            output[i].join();
+        }
+        for(int i=0; i<numTasks; i++){
+            sum += output[i].getValue();
+        }
         return sum;
+
+
     }
 }
